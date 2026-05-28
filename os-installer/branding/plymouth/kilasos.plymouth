@@ -1,0 +1,55 @@
+[Plymouth Theme]
+Name=KilasOS
+Description=KilasOS boot splash
+ModuleName=script
+ImageDir=/usr/share/plymouth/themes/kilasos
+ScriptFile=kilasos.script
+
+# ---kilasos.script---
+# Minimal KilasOS Plymouth script
+# Shows centered text, progress bar, and spinner
+
+Window.SetBackgroundTopColor(0, 40, 80);
+Window.SetBackgroundBottomColor(0, 40, 80);
+Window.SetBackgroundColor(Window.GetBackgroundTopColor());
+
+# Create centered text
+text = Text.Create("KilasOS");
+text.SetFont("DejaVu Sans 14");
+text.SetColor(Color(255, 255, 255));
+text.SetPosition(0.5, 0.5, 0.5, 0.5);
+text.SetHorizontalAlignment(HorizontalAlignCenter);
+text.SetVerticalAlignment(VerticalAlignMiddle);
+Window.AddObject(text);
+
+# Create progress bar
+progress_bar = ProgressBar.Create();
+progress_bar.SetPosition(0.5, 0.6, 0.5, 0.5);
+progress_bar.SetWidth(0.4);
+progress_bar.SetHeight(0.02);
+progress_bar.SetBarColor(Color(0, 120, 215));
+progress_bar.SetBackgroundColor(Color(50, 50, 50));
+Window.AddObject(progress_bar);
+
+# Create spinner
+spinner = Spinner.Create();
+spinner.SetPosition(0.5, 0.7, 0.5, 0.5);
+spinner.SetRadius(0.03);
+spinner.SetRotationSpeed(0.5);
+spinner.SetColor(Color(0, 120, 215));
+Window.AddObject(spinner);
+
+# Show initial progress
+progress_bar.SetProgress(0);
+
+# Animate progress bar slowly
+function UpdateProgress()
+{
+    current = progress_bar.GetProgress();
+    if (current < 1.0) {
+        progress_bar.SetProgress(current + 0.01);
+    }
+}
+
+# Start progress animation
+Timer.Timeout(100, "UpdateProgress");

@@ -1,0 +1,60 @@
+.TH NASD 8 "2026-05-13" "0.45.0" "KilasOS Administration Manual"
+.SH NAME
+nasd \- KilasOS NAS administration daemon
+.SH SYNOPSIS
+.B nasd
+[\fB\-\-addr\fR \fIhost:port\fR]
+[\fB\-\-version\fR]
+.SH DESCRIPTION
+.B nasd
+is the HTTP API and web UI daemon for KilasOS, a NAS operating system
+built on Debian with ZFS.  It manages ZFS pools and datasets, Samba and
+NFS shares, backup jobs (borg, restic, rclone), Docker containers and
+compose stacks, system monitoring, and security auditing through a
+single HTTPS interface.
+.PP
+The daemon requires root-equivalent privileges for ZFS and systemd
+operations; these are delegated via a
+.BR sudoers (5)
+allowlist that restricts the
+.B kilasos
+service account to a fixed set of binaries.
+.SH OPTIONS
+.TP
+\fB\-\-addr\fR \fIhost:port\fR
+Listen address.  Default:
+.BR 0.0.0.0:8443 .
+.TP
+\fB\-\-version\fR
+Print version and build information, then exit.
+.SH FILES
+.TP
+.I /etc/kilasos/env
+Environment file sourced by systemd before starting the daemon.
+.TP
+.I /etc/sudoers.d/kilasos
+NOPASSWD allowlist for the
+.B kilasos
+service account.
+.TP
+.I /var/lib/kilasos/
+Persistent state directory (ZFS properties cache, backup job
+definitions, alert rules, etc.).
+.TP
+.I /var/log/kilasos/
+Audit and operational logs.
+.SH SIGNALS
+.TP
+.B SIGTERM
+Graceful shutdown: stops the HTTP listener, waits for in-flight
+requests to complete, then exits.
+.SH SEE ALSO
+.BR systemd.service (5),
+.BR sudoers (5),
+.BR zfs (8),
+.BR zpool (8),
+.BR smbd (8),
+.BR borg (1),
+.BR restic (1)
+.SH AUTHOR
+KilasOS Maintainers <maintainers@kilasos.org>

@@ -1,0 +1,26 @@
+# Build artifacts
+/bin/
+/nasd
+/dist/
+*.deb
+
+# Daemon state files (when nasd runs from the repo dir during local testing,
+# it writes its state JSONs to cwd instead of /var/lib/kilasos/)
+/users.json
+/sessions.json
+/audit.json
+/schedules.json
+/remotes.json
+/apps.json
+/rsync.json
+/wol.json
+/webhook.json
+/smtp.json
+/backup-jobs.json
+/backup-secrets.json
+/monitor-state.json
+/lynis-state.json
+/ssh-key-audit.json
+/arrays.json
+/keys/
+/backup-job-logs/

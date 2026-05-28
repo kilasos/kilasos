@@ -1,0 +1,29 @@
+#cloud-config
+hostname: kilasos
+manage_etc_hosts: true
+locale: en_US.UTF-8
+timezone: UTC
+users:
+  - name: kilas
+    sudo: ["ALL=(ALL) ALL"]
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ... user@example.com
+    lock_passwd: false
+    groups: sudo
+ssh_pwauth: true
+packages:
+  - zfsutils-linux
+  - zfs-zed
+  - openssh-server
+  - curl
+  - sudo
+  - smartmontools
+runcmd:
+  - |
+    curl -fsSL https://pkg.kilasos.io/nasd.deb -o /tmp/nasd.deb
+    dpkg -i /tmp/nasd.deb || apt-get install -fy
+    systemctl enable --now nasd
+    hostnamectl set-hostname kilasos
+    systemctl restart ssh
+power_state:
+  mode: no-reboot

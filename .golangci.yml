@@ -1,0 +1,16 @@
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - govet
+    - ineffassign
+    - unused
+    - staticcheck
+  disable-all: true
+
+run:
+  timeout: 2m
+
+issues:
+  max-same-issues: 0
+  exclude-use-default: false

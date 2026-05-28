@@ -1,0 +1,41 @@
+[Unit]
+Description=KilasOS NAS Daemon
+Documentation=https://kilasos.org
+After=network.target zfs.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=kilasos
+Group=kilasos
+EnvironmentFile=-/etc/kilasos/env
+ExecStart=/usr/local/sbin/nasd --addr 0.0.0.0:8080
+Restart=on-failure
+RestartSec=3s
+
+# Sudo is unusable here (the other directives implicitly enable kernel NoNewPrivs);
+# privileges are granted via inherited ambient capabilities instead.
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_SYS_ADMIN CAP_SYS_MODULE CAP_SYSLOG CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_CHOWN CAP_FOWNER CAP_FSETID CAP_KILL CAP_SYS_BOOT CAP_SYS_TIME CAP_SYS_PTRACE CAP_SYS_RESOURCE CAP_SETUID CAP_SETGID CAP_MAC_ADMIN
+NoNewPrivileges=true
+
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+# Drop /var/run/docker.sock and /opt/kilasos-apps if Docker isn't installed.
+ReadWritePaths=/var/lib/kilasos /var/log/kilasos /etc/kilasos /etc/samba /mnt /var/run/docker.sock /opt/kilasos-apps
+ReadOnlyPaths=/etc /usr
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+MemoryMax=512M
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

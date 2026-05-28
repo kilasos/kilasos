@@ -1,0 +1,895 @@
+openapi: "3.0.3"
+info:
+  title: KilasOS API
+  description: |
+    JSON HTTP API for the KilasOS NAS daemon. All endpoints under
+    `/api/v1` require a Bearer token in the `Authorization` header
+    except the public `/auth/login`, `/auth/register`, `/auth/oidc/*`,
+    `/auth/ldap/login`, `/auth/login-customization`, and `/share/*`
+    endpoints.
+  version: 0.45.0
+  contact:
+    name: Arturo Lopez
+    email: arturo.lopez@greenfuturestechnologies.com
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+  - url: https://{host}/api/v1
+    description: Production
+    variables:
+      host:
+        default: kilasos.local
+        description: Your KilasOS hostname or IP
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Storage
+  - name: Files
+  - name: Network
+  - name: Apps
+  - name: Security
+  - name: Audit
+  - name: Monitor
+
+paths:
+  # ── Auth ──
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate with username and password
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: {type: string}
+                password: {type: string}
+                totp_code: {type: string}
+      responses:
+        "200": {description: Token + role}
+        "400": {description: Invalid credentials}
+        "429": {description: Rate limited}
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register initial admin user (setup mode only)
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: {type: string}
+                password: {type: string}
+      responses:
+        "201": {description: Token + role}
+        "403": {description: Setup already complete}
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Invalidate session token
+      responses:
+        "200": {description: Logged out}
+
+  /auth/sessions:
+    get:
+      tags: [Auth]
+      summary: List active sessions for current user
+      responses:
+        "200": {description: Array of SessionView}
+
+  /auth/sessions/{token}:
+    delete:
+      tags: [Auth]
+      summary: Revoke a single session
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        "200": {description: Revoked}
+
+  /auth/password/change:
+    post:
+      tags: [Auth]
+      summary: Change own password
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                old_password: {type: string}
+                new_password: {type: string}
+      responses:
+        "200": {description: Changed}
+
+  # ── TOTP ──
+  /totp/status:
+    get:
+      tags: [Auth]
+      summary: Check TOTP enrollment status
+      responses:
+        "200": {description: "{enabled: bool}"}
+
+  /totp/enroll:
+    post:
+      tags: [Auth]
+      summary: Begin TOTP enrollment
+      responses:
+        "200": {description: "{secret, uri}"}
+
+  /totp/confirm:
+    post:
+      tags: [Auth]
+      summary: Confirm TOTP enrollment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: {type: string}
+      responses:
+        "200": {description: Activated}
+
+  /totp/backup-codes/generate:
+    post:
+      tags: [Auth]
+      summary: Generate new TOTP backup codes
+      responses:
+        "200": {description: "{codes: string[]}"}
+
+  # ── Users (admin-only) ──
+  /users:
+    get:
+      tags: [Users]
+      summary: List all registered users
+      responses:
+        "200": {description: Array of UserView}
+    post:
+      tags: [Users]
+      summary: Create a new user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: {type: string}
+                password: {type: string}
+                role: {type: string}
+      responses:
+        "201": {description: Created user}
+
+  /users/{username}:
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        "200": {description: Deleted}
+
+  /users/{username}/role:
+    patch:
+      tags: [Users]
+      summary: Change user role
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: {type: string}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: {type: string}
+      responses:
+        "200": {description: Role updated}
+
+  # ── Storage ──
+  /arrays:
+    get:
+      tags: [Storage]
+      summary: List all ZFS pools
+      responses:
+        "200": {description: Array of Array}
+    post:
+      tags: [Storage]
+      summary: Create a new ZFS pool
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                type: {type: string}
+                topology: {type: string}
+                devices: {type: array, items: {type: string}}
+                force: {type: boolean}
+
+  /arrays/{name}:
+    delete:
+      tags: [Storage]
+      summary: Destroy a pool
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: {type: string}
+
+  /arrays/{name}/datasets:
+    get:
+      tags: [Storage]
+      summary: List datasets in a pool
+    post:
+      tags: [Storage]
+      summary: Create a dataset
+
+  /arrays/{name}/snapshots:
+    get:
+      tags: [Storage]
+      summary: List snapshots in a pool
+    post:
+      tags: [Storage]
+      summary: Create a snapshot
+
+  /arrays/{name}/snapshots/{snap}:
+    delete:
+      tags: [Storage]
+      summary: Delete a snapshot
+
+  /arrays/{name}/snapshots/{snap}/rollback:
+    post:
+      tags: [Storage]
+      summary: Rollback to a snapshot
+
+  /disks:
+    get:
+      tags: [Storage]
+      summary: List physical disks with SMART data
+      responses:
+        "200": {description: Array of Disk}
+
+  /disks/{name}/smart-detail:
+    get:
+      tags: [Storage]
+      summary: Get extended SMART attribute detail
+
+  /disks/{name}/spindown:
+    post:
+      tags: [Storage]
+      summary: Set disk spin-down timeout
+
+  /storage/zfs/l2arc:
+    get:
+      tags: [Storage]
+      summary: List L2ARC cache devices
+    post:
+      tags: [Storage]
+      summary: Add L2ARC cache device
+
+  /storage/zfs/slog:
+    get:
+      tags: [Storage]
+      summary: List SLOG devices
+    post:
+      tags: [Storage]
+      summary: Add SLOG device
+
+  /storage/zfs/compression:
+    get:
+      tags: [Storage]
+      summary: Get per-dataset compression ratios
+
+  /storage/btrfs/subvolumes:
+    get:
+      tags: [Storage]
+      summary: List Btrfs subvolumes
+    post:
+      tags: [Storage]
+      summary: Create a Btrfs subvolume
+
+  /storage/btrfs/snapshots:
+    get:
+      tags: [Storage]
+      summary: List Btrfs snapshots
+    post:
+      tags: [Storage]
+      summary: Create a Btrfs snapshot
+
+  /system/scrub-schedules:
+    get:
+      tags: [Storage]
+      summary: Get scrub schedules
+
+  # ── Files ──
+  /files/list:
+    get:
+      tags: [Files]
+      summary: List directory contents
+      parameters:
+        - name: path
+          in: query
+          schema: {type: string}
+      responses:
+        "200": {description: Array of FileNode}
+
+  /files/tree:
+    get:
+      tags: [Files]
+      summary: Get recursive directory tree
+
+  /files/upload:
+    post:
+      tags: [Files]
+      summary: Upload a file (multipart)
+
+  /files/download:
+    get:
+      tags: [Files]
+      summary: Download a file
+
+  /files/delete:
+    post:
+      tags: [Files]
+      summary: Move file to trash
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path: {type: string}
+
+  /files/rename:
+    post:
+      tags: [Files]
+      summary: Rename a file or directory
+
+  /files/copy:
+    post:
+      tags: [Files]
+      summary: Copy a file or directory
+
+  /files/folder-zip:
+    post:
+      tags: [Files]
+      summary: Download a directory as ZIP
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path: {type: string}
+
+  /files/search:
+    post:
+      tags: [Files]
+      summary: Search files by pattern
+
+  /trash/list:
+    get:
+      tags: [Files]
+      summary: List all trash entries across pools
+
+  /trash/restore:
+    post:
+      tags: [Files]
+      summary: Restore a file from trash
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path: {type: string}
+
+  /trash/empty:
+    post:
+      tags: [Files]
+      summary: Permanently empty all trash
+
+  /shares:
+    get:
+      tags: [Files]
+      summary: List SMB/NFS shares
+    post:
+      tags: [Files]
+      summary: Create a new share
+
+  /shares/{name}:
+    delete:
+      tags: [Files]
+      summary: Remove a share
+
+  # ── Network ──
+  /network:
+    get:
+      tags: [Network]
+      summary: List network interfaces
+
+  /network/{iface}/config:
+    get:
+      tags: [Network]
+      summary: Get interface configuration
+    put:
+      tags: [Network]
+      summary: Set interface configuration
+
+  /network/wireguard:
+    get:
+      tags: [Network]
+      summary: Get WireGuard interface and peers
+
+  /wireguard/peers:
+    get:
+      tags: [Network]
+      summary: List WireGuard peers
+    post:
+      tags: [Network]
+      summary: Add WireGuard peer
+
+  /caddy/sites:
+    get:
+      tags: [Network]
+      summary: List Caddy reverse-proxy sites
+    post:
+      tags: [Network]
+      summary: Create a Caddy site
+
+  /cf-tunnel/status:
+    get:
+      tags: [Network]
+      summary: Get Cloudflare tunnel status
+
+  /cf-tunnel/start:
+    post:
+      tags: [Network]
+      summary: Start a Cloudflare tunnel
+
+  /cf-tunnel/stop:
+    post:
+      tags: [Network]
+      summary: Stop a Cloudflare tunnel
+
+  /tailscale/funnel:
+    post:
+      tags: [Network]
+      summary: Enable or disable Tailscale funnel
+
+  /upnp/status:
+    get:
+      tags: [Network]
+      summary: Get UPnP port-forwarding status
+
+  /upnp/forward:
+    post:
+      tags: [Network]
+      summary: Add UPnP port forward
+
+  /wol:
+    get:
+      tags: [Network]
+      summary: List Wake-on-LAN targets
+    post:
+      tags: [Network]
+      summary: Add Wake-on-LAN target
+
+  /network/speedtest:
+    post:
+      tags: [Network]
+      summary: Run internet speed test
+
+  /network/ping:
+    post:
+      tags: [Network]
+      summary: Ping a host
+
+  /dnsmasq/config:
+    get:
+      tags: [Network]
+      summary: Get dnsmasq DNS config
+    put:
+      tags: [Network]
+      summary: Set dnsmasq DNS config
+
+  /dnsmasq/dhcp:
+    get:
+      tags: [Network]
+      summary: Get dnsmasq DHCP config
+    put:
+      tags: [Network]
+      summary: Set dnsmasq DHCP config
+
+  /system/firewall:
+    get:
+      tags: [Network]
+      summary: Get firewall rules
+
+  /system/iptables:
+    get:
+      tags: [Network]
+      summary: Get iptables rules
+
+  /system/hosts:
+    get:
+      tags: [Network]
+      summary: Get /etc/hosts entries
+    post:
+      tags: [Network]
+      summary: Add host entry
+
+  /system/dns:
+    get:
+      tags: [Network]
+      summary: Get DNS configuration
+
+  /system/sshd-config:
+    get:
+      tags: [Network]
+      summary: Get SSH daemon config
+
+  # ── Apps ──
+  /catalog:
+    get:
+      tags: [Apps]
+      summary: Get the full 32-template app catalog
+
+  /apps:
+    get:
+      tags: [Apps]
+      summary: List deployed apps
+    post:
+      tags: [Apps]
+      summary: Deploy an app from catalog
+
+  /apps/{name}/start:
+    post:
+      tags: [Apps]
+      summary: Start a deployed app
+
+  /apps/{name}/stop:
+    post:
+      tags: [Apps]
+      summary: Stop a deployed app
+
+  /apps/{name}:
+    delete:
+      tags: [Apps]
+      summary: Remove a deployed app (destroys data)
+
+  /app-stacks:
+    get:
+      tags: [Apps]
+      summary: List app-stack templates
+    post:
+      tags: [Apps]
+      summary: Deploy an app stack
+
+  /app-update/{name}:
+    get:
+      tags: [Apps]
+      summary: Check for app image update
+    post:
+      tags: [Apps]
+      summary: Apply app update
+
+  /app-health/{name}:
+    get:
+      tags: [Apps]
+      summary: Get app health status
+
+  /app-config/{name}:
+    get:
+      tags: [Apps]
+      summary: Export app configuration
+
+  /app-favorites:
+    get:
+      tags: [Apps]
+      summary: List favorite apps
+
+  /containers:
+    get:
+      tags: [Apps]
+      summary: List all Docker containers
+
+  /containers/{id}/start:
+    post:
+      tags: [Apps]
+      summary: Start a container
+
+  /containers/{id}/stop:
+    post:
+      tags: [Apps]
+      summary: Stop a container
+
+  /containers/{id}/logs:
+    get:
+      tags: [Apps]
+      summary: Get container logs
+
+  /containers/{id}/stats:
+    get:
+      tags: [Apps]
+      summary: Get live container stats
+
+  /containers/{id}/exec:
+    post:
+      tags: [Apps]
+      summary: Execute command in container
+
+  /containers/pull:
+    post:
+      tags: [Apps]
+      summary: Pull a Docker image
+
+  /docker/images:
+    get:
+      tags: [Apps]
+      summary: List Docker images
+
+  /docker/volumes:
+    get:
+      tags: [Apps]
+      summary: List Docker volumes
+
+  /compose:
+    get:
+      tags: [Apps]
+      summary: List Docker Compose projects
+
+  /compose/action:
+    post:
+      tags: [Apps]
+      summary: Run compose action (up/down/restart)
+
+  # ── Security ──
+  /security/apparmor:
+    get:
+      tags: [Security]
+      summary: Get AppArmor profiles
+
+  /security/apparmor/enforce:
+    post:
+      tags: [Security]
+      summary: Set AppArmor profile mode
+
+  /security/selinux:
+    get:
+      tags: [Security]
+      summary: Get SELinux status
+
+  /security/lynis/run:
+    post:
+      tags: [Security]
+      summary: Run Lynis audit
+
+  /security/lynis/status:
+    get:
+      tags: [Security]
+      summary: Get Lynis audit status
+
+  /security/lynis/report:
+    get:
+      tags: [Security]
+      summary: Get Lynis audit report
+
+  /security/trivy/scan:
+    post:
+      tags: [Security]
+      summary: Scan an image with Trivy
+
+  /security/ssh/audit:
+    get:
+      tags: [Security]
+      summary: Audit SSH authorized keys
+
+  /security/failed-logins:
+    get:
+      tags: [Security]
+      summary: Get failed SSH login attempts
+
+  /security/sudo/audit:
+    get:
+      tags: [Security]
+      summary: Get sudo command audit
+
+  /security/compliance/report:
+    get:
+      tags: [Security]
+      summary: Generate CIS compliance report
+
+  /security/gdpr/export:
+    get:
+      tags: [Security]
+      summary: Export all user data (tar.gz)
+
+  /security/gdpr/user/{username}:
+    delete:
+      tags: [Security]
+      summary: Delete user data (GDPR)
+
+  /security/privacy:
+    get:
+      tags: [Security]
+      summary: Get privacy settings
+    put:
+      tags: [Security]
+      summary: Set privacy settings
+
+  /security/integrity:
+    get:
+      tags: [Security]
+      summary: Run integrity check
+
+  /security/usb/allowlist:
+    get:
+      tags: [Security]
+      summary: Get USB allowlist
+    put:
+      tags: [Security]
+      summary: Set USB allowlist
+
+  /security/usb/block:
+    post:
+      tags: [Security]
+      summary: Block a USB device
+
+  /system/server-certificate:
+    get:
+      tags: [Security]
+      summary: Get server certificate info
+
+  /system/fail2ban:
+    get:
+      tags: [Security]
+      summary: Get fail2ban status
+
+  /auth/brute-force:
+    get:
+      tags: [Security]
+      summary: Get brute-force protection status
+
+  # ── Audit ──
+  /audit-log:
+    get:
+      tags: [Audit]
+      summary: Get recent audit log entries
+      parameters:
+        - name: n
+          in: query
+          schema: {type: integer, default: 100}
+
+  /audit-log/export:
+    get:
+      tags: [Audit]
+      summary: Export audit log as CSV
+
+  /audit/retention:
+    get:
+      tags: [Audit]
+      summary: Get audit retention config
+    put:
+      tags: [Audit]
+      summary: Set audit retention config
+
+  /audit/rotate:
+    post:
+      tags: [Audit]
+      summary: Rotate audit logs
+
+  /audit/search:
+    post:
+      tags: [Audit]
+      summary: Search audit logs
+
+  # ── Monitor ──
+  /alerts:
+    get:
+      tags: [Monitor]
+      summary: Get active alerts
+
+  /alert-rules:
+    get:
+      tags: [Monitor]
+      summary: List monitor alert rules
+    post:
+      tags: [Monitor]
+      summary: Create alert rule
+
+  /alert-rules/{name}:
+    put:
+      tags: [Monitor]
+      summary: Update alert rule
+    delete:
+      tags: [Monitor]
+      summary: Delete alert rule
+
+  /alert-events:
+    get:
+      tags: [Monitor]
+      summary: List alert events
+
+  /notification-channels:
+    get:
+      tags: [Monitor]
+      summary: List notification channels
+    post:
+      tags: [Monitor]
+      summary: Create notification channel
+
+  /notification-channels/{name}:
+    put:
+      tags: [Monitor]
+      summary: Update notification channel
+    delete:
+      tags: [Monitor]
+      summary: Delete notification channel
+
+  /notification-channels/{name}/test:
+    post:
+      tags: [Monitor]
+      summary: Test a notification channel
+
+  /webhook-config:
+    get:
+      tags: [Monitor]
+      summary: Get webhook config
+    put:
+      tags: [Monitor]
+      summary: Set webhook config
+
+  /webhook-config/test:
+    post:
+      tags: [Monitor]
+      summary: Send test webhook
+
+  /system/monitor-config:
+    get:
+      tags: [Monitor]
+      summary: Get monitor thresholds
+    put:
+      tags: [Monitor]
+      summary: Set monitor thresholds
+
+  /metrics:
+    get:
+      tags: [Monitor]
+      summary: Get system metrics (CPU, memory, network, pools)
+
+  /metrics/history:
+    get:
+      tags: [Monitor]
+      summary: Get metrics history (30 min buffer)
+
+  /metrics/prom:
+    get:
+      tags: [Monitor]
+      summary: Get Prometheus-format metrics

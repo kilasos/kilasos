@@ -1,0 +1,20 @@
+{
+  "name": "KilasOS NAS",
+  "short_name": "KilasOS",
+  "description": "KilasOS NAS Administration Interface",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#1a2537",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "en"
+}

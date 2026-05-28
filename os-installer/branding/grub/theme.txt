@@ -1,0 +1,48 @@
+# KilasOS GRUB2 Theme
+# GRUB2 theme configuration for KilasOS Phase 3 Session 10
+
+# Title settings
+title-text: "KilasOS"
+title-color: "#00aaff"
+title-font: "DejaVu Sans Bold 16"
+
+# Boot menu positioning and styling
+boot-menu left: 10%
+boot-menu right: 10%
+boot-menu top: 20%
+boot-menu bottom: 20%
+item-color: "#cccccc"
+selected-color: "#ffffff"
+item-height: 24
+item-padding: 8
+selected-item-bg-color: "#00aaff"
+selected-item-bg-opacity: 128
+
+# Scrollbar settings
+scrollbar: true
+scrollbar-width: 4
+scrollbar-color: "#00aaff"
+scrollbar-bg-color: "#222222"
+
+# Progress bar
+progress-bar left: 15%
+progress-bar right: 15%
+progress-bar bottom: 10%
+progress-bar-width: 70%
+progress-bar-height: 6
+progress-bar-fg-color: "#00aaff"
+progress-bar-bg-color: "#333333"
+
+# Terminal settings
+terminal left: 5%
+terminal right: 5%
+terminal bottom: 5%
+terminal-height: 12
+
+# Resolution fallback (VESA-safe)
+resolution: 1024x768
+fallback-resolution: 640x480
+
+# Background image (optional placeholder)
+# background-image: "/boot/grub/background.png"
+# background-color: "#1a1a1a"

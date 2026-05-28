@@ -1,0 +1,81 @@
+name: kilasos-nasd
+arch: amd64
+platform: linux
+version: 0.45.0
+release: 1
+section: admin
+priority: optional
+maintainer: "KilasOS Maintainers <maintainers@kilasos.org>"
+description: |
+  KilasOS NAS administration daemon — provides the HTTP API and web UI
+  used to manage ZFS pools, shares, backups, and apps on a KilasOS host.
+vendor: KilasOS
+homepage: https://kilasos.org
+license: GPL-3.0
+depends:
+  - libc6
+  - zfsutils-linux
+  - zfs-zed
+  - samba
+  - samba-common-bin
+  - smartmontools
+  - systemd
+  - sudo
+recommends:
+  - docker.io
+  - restic
+  - borgbackup
+  - rclone
+  - jdupes
+  - fail2ban
+  - lynis
+contents:
+  - src: bin/nasd
+    dst: /usr/sbin/nasd
+    file_info:
+      mode: 0755
+  - src: packaging/systemd/nasd.service
+    dst: /lib/systemd/system/nasd.service
+    file_info:
+      mode: 0644
+  - src: packaging/sshd_config.d/99-kilasos.conf
+    dst: /etc/ssh/sshd_config.d/99-kilasos.conf
+    type: config
+    file_info:
+      mode: 0644
+  - src: packaging/env.example
+    dst: /etc/kilasos/env.example
+    type: config|noreplace
+    file_info:
+      mode: 0644
+  - src: packaging/copyright
+    dst: /usr/share/doc/kilasos-nasd/copyright
+    file_info:
+      mode: 0644
+  - src: packaging/changelog.Debian.gz
+    dst: /usr/share/doc/kilasos-nasd/changelog.Debian.gz
+    file_info:
+      mode: 0644
+  - src: packaging/nasd.8.gz
+    dst: /usr/share/man/man8/nasd.8.gz
+    file_info:
+      mode: 0644
+  - dst: /var/lib/kilasos
+    type: dir
+    file_info:
+      mode: 0750
+      owner: kilasos
+      group: kilasos
+  - dst: /var/log/kilasos
+    type: dir
+    file_info:
+      mode: 0750
+      owner: kilasos
+      group: kilasos
+  - dst: /etc/kilasos
+    type: dir
+    file_info:
+      mode: 0755
+scripts:
+  postinstall: packaging/postinst.sh
+  preremove: packaging/prerm.sh
