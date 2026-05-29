@@ -14,7 +14,7 @@ promptly. Do NOT open a public GitHub issue — the issue tracker is a
 public channel and would expose the vulnerability before a fix is
 available.
 
-**Email:** arturo.lopez@greenfuturestechnologies.com
+**Email:** security@kilasos.org
 
 **Response SLA:**
 - Acknowledgement within 72 hours
