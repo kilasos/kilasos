@@ -2860,7 +2860,7 @@ func (p *linuxProvider) ScanServices(ctx context.Context, host string) ([]Servic
 		wg.Add(1)
 		go func(port int) {
 			defer wg.Done()
-			addr := fmt.Sprintf("%s:%d", host, port)
+			addr := net.JoinHostPort(host, strconv.Itoa(port))
 			conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
 			if err != nil {
 				return
@@ -3442,7 +3442,7 @@ func (p *linuxProvider) NetIfaceStats(ctx context.Context) ([]NetIfaceStats, err
 }
 
 func (p *linuxProvider) TLSCert(ctx context.Context, host string, port int) (TLSCertInfo, error) {
-	addr := fmt.Sprintf("%s:%d", host, port)
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
 	// quick connectivity check first
 	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
